@@ -5,3 +5,9 @@ infra
 test
 *.md
 .env
+dist
+jest.config.js
+sonar-project.properties
+.dockerignore
+.dockerignore.ejemplo
+.gitignore
