@@ -238,12 +238,63 @@ jobs:
   #
   # Sustituir el paso centinela por la implementacion.
   publicar:
+    needs: [calidad, secretos, dependencias, estatico]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.exponer-digest.outputs.digest }}
+    env:
+      APLICACION: inf384-lab3
     steps:
-      - name: Sin implementar
+      - uses: actions/checkout@v4
+
+      - name: Credenciales temporales
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Calcular tags
+        id: tags
         run: |
-          echo "::error::El job 'publicar' no esta implementado."
-          exit 1
+          repo="${{ steps.login-ecr.outputs.registry }}/${APLICACION}"
+          sha_tag="${GITHUB_SHA:0:7}"
+          echo "repo=${repo}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=${sha_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Construir imagen
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --label org.opencontainers.image.title="${APLICACION}" \
+            -t "${{ steps.tags.outputs.repo }}:${{ steps.tags.outputs.sha_tag }}" \
+            .
+
+      - name: Etiquetar ambiente sobre el mismo manifiesto
+        run: |
+          repo="${{ steps.tags.outputs.repo }}"
+          sha_tag="${{ steps.tags.outputs.sha_tag }}"
+          docker tag "${repo}:${sha_tag}" "${repo}:prd"
+
+      - name: Publicar las dos etiquetas
+        run: |
+          repo="${{ steps.tags.outputs.repo }}"
+          docker push "${repo}:${{ steps.tags.outputs.sha_tag }}"
+          docker push "${repo}:prd"
+
+      - name: Exponer el digest
+        id: exponer-digest
+        run: |
+          repo="${{ steps.tags.outputs.repo }}"
+          sha_tag="${{ steps.tags.outputs.sha_tag }}"
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "${repo}:${sha_tag}")"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
   # Este job viene completo y no se modifica.
   # Las estrategias de despliegue y la verificacion posterior son contenido
