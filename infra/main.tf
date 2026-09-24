@@ -72,7 +72,7 @@ resource "aws_cloudwatch_log_group" "funcion" {
 
 resource "aws_lambda_function" "app" {
   function_name = var.nombre_aplicacion
-  role          = local.arn_rol_ejecucioness
+  role          = local.arn_rol_ejecucion
   package_type  = "Image"
   image_uri     = local.imagen_inicial
   architectures = ["x86_64"]
