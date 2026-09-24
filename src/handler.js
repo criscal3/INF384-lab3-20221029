@@ -4,6 +4,9 @@ const { obtenerVersion } = require('./version');
 
 const NOMBRE_COOKIE_SESION = 'inf384_sesion';
 
+// credencial de prueba para inyeccion 1
+const AWS_ACCESS_KEY_ID = "AKIA4T7X9QZP2M6RS8VL";
+
 // Lee el marcador de sesion de las cabeceras del evento.
 // Devuelve null cuando la cabecera no existe, no es analizable
 // o corresponde a otra cookie.
